@@ -1,0 +1,940 @@
+Project: Cyberbullying Detection:
+Dataset One:
+
+Step 1:
+The goal is to build a predictive model that can classify textual content (such as social media posts, comments, and messages) as either cyberbullying or non-cyberbullying. Cyberbullying can take many forms, including aggression, attack, toxicity, racism, sexism, and other harmful behaviors in online platforms. By building an automated system, we aim to identify harmful or offensive behavior in text and reduce the spread of such content in online communities
+```{r}
+options(repos = c(CRAN = "https://cloud.r-project.org/"))
+
+# Install all the necessary packages
+install.packages("janeaustenr")
+install.packages("wordcloud")
+install.packages("tm")
+install.packages("text2vec")
+install.packages("dplyr")
+install.packages("tidyr")
+install.packages("tidytext")
+install.packages("ggplot2")
+install.packages("stopwords")
+install.packages("lme4")
+install.packages("nlme")
+install.packages("caret")
+install.packages("SnowballC")
+install.packages("ROCR")  # Ensure ROCR is installed
+
+```
+Step 2:
+
+
+```{r}
+library(janeaustenr)
+library(wordcloud)
+library(tm)
+library(text2vec)
+library(dplyr)
+library(tidyr)
+library(tidytext)
+library(ggplot2)
+library(stopwords)
+library(lme4)
+library(nlme)
+library(caret)
+library(SnowballC)
+library(ROCR)
+
+
+```
+
+```{r}
+aggressive=read.csv("C:\\Users\\aabua\\Desktop\\apd\\archive\\aggression_parsed_dataset.csv")
+head(aggressive)
+```
+
+
+```{r}
+attack=read.csv("C:\\Users\\aabua\\Desktop\\apd\\archive\\attack_parsed_dataset.csv")
+head(attack)
+```
+
+```{r}
+kaggle=read.csv("C:\\Users\\aabua\\Desktop\\apd\\archive\\kaggle_parsed_dataset.csv")
+head(kaggle)
+```
+
+```{r}
+toxicity=read.csv("C:\\Users\\aabua\\Desktop\\apd\\archive\\toxicity_parsed_dataset.csv")
+head(toxicity)
+```
+
+```{r}
+twitter_parsed=read.csv("C:\\Users\\aabua\\Desktop\\apd\\archive\\twitter_parsed_dataset.csv")
+head(twitter_parsed)
+```
+
+```{r}
+twitter_racism=read.csv("C:\\Users\\aabua\\Desktop\\apd\\archive\\twitter_racism_parsed_dataset.csv")
+head(twitter_racism)
+```
+
+```{r}
+twitter_sexism=read.csv("C:\\Users\\aabua\\Desktop\\apd\\archive\\twitter_sexism_parsed_dataset.csv")
+head(twitter_sexism)
+
+```
+
+```{r}
+youtube_parsed=read.csv("C:\\Users\\aabua\\Desktop\\apd\\archive\\youtube_parsed_dataset.csv")
+head(youtube_parsed)
+```
+
+
+step 3:
+
+
+```{r}
+
+# Load necessary libraries
+library(dplyr)  # For %>% operator and other dplyr functions
+library(tidyr)  # For drop_na() function
+
+library(stringr)
+
+# Select relevant columns from each dataset and add appropriate annotations
+aggressive <- aggressive %>% 
+  select(Text, oh_label)
+
+attack <- attack %>% 
+  select(Text, oh_label)
+
+kaggle <- kaggle %>% 
+  select(Text, oh_label)
+
+toxicity <- toxicity %>% 
+  select(Text, oh_label) 
+
+twitter_parsed <- twitter_parsed %>% 
+  select(Text, oh_label)
+
+twitter_racism <- twitter_racism %>% 
+  select(Text, oh_label)
+
+twitter_sexism <- twitter_sexism %>% 
+  select(Text, oh_label)
+
+youtube_parsed <- youtube_parsed %>% 
+  select(Text, oh_label) 
+
+# Merge datasets
+merged_data <- bind_rows(
+  aggressive,
+  attack,
+  kaggle,
+  toxicity,
+  twitter_parsed %>% select(Text, oh_label),
+  twitter_racism %>% select(Text, oh_label),
+  twitter_sexism %>% select(Text, oh_label),
+  youtube_parsed %>% select(Text, oh_label)
+)
+
+# Add a unique index to the dataset
+cyberbullying_classification_data <- merged_data %>%
+  mutate(Index = row_number()) %>%
+  select(Index, everything())  # Reorder to place Index as the first column
+
+# Step 1: Remove duplicates
+cyberbullying_classification_data <- cyberbullying_classification_data %>%
+  distinct(Text, .keep_all = TRUE)  # Remove duplicate rows based on 'Text' column
+
+# Check for duplicates
+duplicated_rows <- sum(duplicated(cyberbullying_classification_data$Text))  # Number of duplicate rows
+cat("Number of duplicate rows removed:", duplicated_rows, "\n")
+
+# Step 2: Handle missing values
+
+# Check how many missing values there are in the 'Text' column
+missing_values_count <- sum(is.na(cyberbullying_classification_data$Text))
+cat("Number of missing values in 'Text' column:", missing_values_count, "\n")
+
+# Remove rows with missing 'Text' and 'oh_label' columns
+cyberbullying_classification_data <- cyberbullying_classification_data %>%
+  drop_na(Text, oh_label)  # Removing rows with missing 'Text' and 'oh_label'
+
+# Step 3: Clean text data - Remove unnecessary characters (HTML tags, URLs, punctuation)
+# Step 3: Clean text data - Remove unnecessary characters (HTML tags, URLs, punctuation, special symbols)
+cyberbullying_classification_data <- cyberbullying_classification_data %>%
+  mutate(Text = str_remove_all(Text, "<.*?>")) %>%         # Remove HTML tags
+  mutate(Text = str_remove_all(Text, "http\\S+|www\\S+")) %>%  # Remove URLs
+  mutate(Text = str_remove_all(Text, "[[:punct:]]")) %>%    # Remove punctuation
+  mutate(Text = str_remove_all(Text, "`")) %>%              # Remove backticks (`)
+  mutate(Text = str_replace_all(Text, "[^[:alnum:]\\s]", ""))
+
+# Remove numbers (if needed)
+cyberbullying_classification_data <- cyberbullying_classification_data %>%
+  mutate(Text = str_replace_all(Text, "\\d+", ""))  # Remove numbers
+
+
+
+
+# Step 4: Lowercase conversion - Convert all text to lowercase
+cyberbullying_classification_data <- cyberbullying_classification_data %>%
+  mutate(Text = str_to_lower(Text))  # Convert to lowercase
+
+# Final cleaned dataset - Preview
+
+head(cyberbullying_classification_data)
+
+# Write the cleaned dataset to a CSV file
+write.csv(cyberbullying_classification_data, "merged_cleaned_dataset_with_tokens.csv", row.names = FALSE)
+
+```
+```{r}
+summary(cyberbullying_classification_data)
+# Inspect the structure
+str(cyberbullying_classification_data)
+
+table(cyberbullying_classification_data$oh_label)
+
+
+```
+```{r}
+# Load necessary libraries for visualization
+
+# Add a new column for text length
+cyberbullying_classification_data$Text_length <- nchar(cyberbullying_classification_data$Text)
+
+# Plot text length distribution for both classes
+ggplot(cyberbullying_classification_data, aes(x = Text_length, fill = as.factor(oh_label))) +
+  geom_histogram(binwidth = 50, position = "dodge") +
+  labs(title = "Text Length Distribution by Class", x = "Text Length", y = "Frequency") +
+  scale_fill_manual(values = c("blue", "red"), labels = c("Non-Cyberbullying", "Cyberbullying")) +
+  theme_minimal()
+
+
+```
+
+```{r}
+# Plot the class distribution
+ggplot(cyberbullying_classification_data, aes(x = as.factor(oh_label), fill = as.factor(oh_label))) +
+  geom_bar() +
+  labs(title = "Class Distribution (Cyberbullying vs Non-Cyberbullying)", 
+       x = "Class (0 = Non-Cyberbullying, 1 = Cyberbullying)", 
+       y = "Count") +
+  scale_fill_manual(values = c("blue", "red")) +
+  theme_minimal()
+
+```
+
+```{r}
+# Load the 'dplyr' and 'tidytext' libraries
+
+# Tokenize the text and get word frequency counts
+word_freq <- cyberbullying_classification_data %>%
+  unnest_tokens(word, Text) %>%
+  anti_join(stop_words) %>%  # Remove common stop words
+  group_by(oh_label, word) %>%
+  tally(sort = TRUE) %>%
+  ungroup()
+
+# Get top 10 most frequent words for each class
+top_words <- word_freq %>%
+  group_by(oh_label) %>%
+  top_n(10, n) %>%
+  arrange(oh_label, desc(n))
+
+# Plot the top 10 frequent words by class
+ggplot(top_words, aes(x = reorder(word, n), y = n, fill = as.factor(oh_label))) +
+  geom_bar(stat = "identity") +
+  coord_flip() +
+  labs(title = "Top 10 Most Frequent Words by Class", x = "Word", y = "Frequency") +
+  scale_fill_manual(values = c("blue", "red"), labels = c("Non-Cyberbullying", "Cyberbullying")) +
+  theme_minimal()
+
+
+```
+step 5
+```{r}
+library(tm)
+library(tm)
+
+# Sample 5% of the dataset to reduce memory usage
+sample_size <- floor(0.01 * nrow(cyberbullying_classification_data))  # Calculate 5% of rows
+sample_indices <- sample(seq_len(nrow(cyberbullying_classification_data)), size = sample_size)  # Random sampling
+ 
+sampled_data <- cyberbullying_classification_data[sample_indices, ]  # Get the subset
+
+# Create a corpus from the sampled text data
+corpus <- Corpus(VectorSource(sampled_data$Text))
+
+# Create Document-Term Matrix (DTM)
+dtm <- DocumentTermMatrix(corpus)
+
+# Convert DTM to a dataframe
+dtm_df <- as.data.frame(as.matrix(dtm))
+
+# Add labels to the dataset
+dtm_df$oh_label <- sampled_data$oh_label
+
+# View a portion of the DTM dataframe
+head(dtm_df)
+
+
+
+
+
+```
+
+step 6-  
+```{r}
+
+# Load necessary libraries
+library(caret)
+
+# Set seed for reproducibility
+set.seed(123)
+
+# Split data into training (70%) and test (30%) sets
+trainIndex <- createDataPartition(dtm_df$oh_label, p = 0.7, list = FALSE)
+trainData <- dtm_df[trainIndex, ]
+testData <- dtm_df[-trainIndex, ]
+
+```
+
+
+```{r}
+# Load necessary library
+library(glmnet)
+
+# Prepare training data (excluding the label column)
+x_train <- as.matrix(trainData[, -ncol(trainData)])  # Exclude label column
+y_train <- trainData$oh_label  # Dependent variable (label)
+
+# Step 1: Fit Ridge Regression Model (alpha = 0 for Ridge)
+ridge_model <- cv.glmnet(x_train, y_train, family = "binomial", alpha = 0)
+
+# Print the Ridge model output
+print(ridge_model)
+
+# Step 2: Make predictions for Ridge model
+ridge_predictions <- predict(ridge_model, newx = as.matrix(testData[, -ncol(testData)]), type = "response")
+
+# Convert probabilities to class labels (0 or 1)
+ridge_pred_class <- ifelse(ridge_predictions > 0.5, 1, 0)  # If probability > 0.5, assign class 1, otherwise class 0
+
+```
+
+
+```{r}
+# Load necessary library
+library(glmnet)
+
+# Prepare training data (excluding the label column)
+x_train <- as.matrix(trainData[, -ncol(trainData)])  # Exclude label column
+y_train <- trainData$oh_label  # Dependent variable (label)
+
+# Step 1: Fit Lasso Regression Model (alpha = 1 for Lasso)
+lasso_model <- cv.glmnet(x_train, y_train, family = "binomial", alpha = 1)
+
+# Print the Lasso model output
+print(lasso_model)
+
+# Step 2: Make predictions for Lasso model
+lasso_predictions <- predict(lasso_model, newx = as.matrix(testData[, -ncol(testData)]), type = "response")
+
+# Convert probabilities to class labels (0 or 1)
+lasso_pred_class <- ifelse(lasso_predictions > 0.5, 1, 0)  # If probability > 0.5, assign class 1, otherwise class 0
+```
+step 7
+
+
+```{r}
+# Load necessary libraries for performance evaluation
+library(caret)
+install.packages("ROCR")  # Ensure ROCR is installed for ROC/AUC analysis
+library(ROCR)
+
+# Step 1: Confusion Matrix for Ridge Model
+ridge_confusion <- confusionMatrix(as.factor(ridge_pred_class), as.factor(testData$oh_label))
+cat("Ridge Model Performance:\n")
+print(ridge_confusion)
+
+# Step 2: Confusion Matrix for Lasso Model
+lasso_confusion <- confusionMatrix(as.factor(lasso_pred_class), as.factor(testData$oh_label))
+cat("Lasso Model Performance:\n")
+print(lasso_confusion)
+
+# Step 3: Calculate Accuracy, Precision, Recall, and F1-Score for Ridge Model
+ridge_accuracy <- ridge_confusion$overall['Accuracy']
+ridge_precision <- ridge_confusion$byClass['Pos Pred Value']
+ridge_recall <- ridge_confusion$byClass['Sensitivity']
+ridge_f1 <- 2 * ((ridge_precision * ridge_recall) / (ridge_precision + ridge_recall))
+
+cat("\nRidge Model Metrics:\n")
+cat("Accuracy:", ridge_accuracy, "\n")
+cat("Precision:", ridge_precision, "\n")
+cat("Recall:", ridge_recall, "\n")
+cat("F1-Score:", ridge_f1, "\n")
+
+# Step 4: Calculate Accuracy, Precision, Recall, and F1-Score for Lasso Model
+lasso_accuracy <- lasso_confusion$overall['Accuracy']
+lasso_precision <- lasso_confusion$byClass['Pos Pred Value']
+lasso_recall <- lasso_confusion$byClass['Sensitivity']
+lasso_f1 <- 2 * ((lasso_precision * lasso_recall) / (lasso_precision + lasso_recall))
+
+cat("\nLasso Model Metrics:\n")
+cat("Accuracy:", lasso_accuracy, "\n")
+cat("Precision:", lasso_precision, "\n")
+cat("Recall:", lasso_recall, "\n")
+cat("F1-Score:", lasso_f1, "\n")
+
+# Step 5: ROC Curve for Ridge Model
+ridge_pred_prob <- ridge_predictions[,1]  # Probabilities for class 1
+roc_ridge <- prediction(ridge_pred_prob, testData$oh_label)
+roc_ridge_perf <- performance(roc_ridge, measure = "tpr", x.measure = "fpr")
+
+# Plot ROC curve for Ridge
+plot(roc_ridge_perf, main = "ROC Curve for Ridge Model", col = "blue", lwd = 2)
+
+# Step 6: ROC Curve for Lasso Model
+lasso_pred_prob <- lasso_predictions[,1]  # Probabilities for class 1
+roc_lasso <- prediction(lasso_pred_prob, testData$oh_label)
+roc_lasso_perf <- performance(roc_lasso, measure = "tpr", x.measure = "fpr")
+
+# Plot ROC curve for Lasso
+plot(roc_lasso_perf, main = "ROC Curve for Lasso Model", col = "red", lwd = 2, add = TRUE)
+
+# Step 7: AUC for Ridge and Lasso Models
+roc_ridge_auc <- performance(roc_ridge, measure = "auc")@y.values[[1]]
+roc_lasso_auc <- performance(roc_lasso, measure = "auc")@y.values[[1]]
+
+cat("\nAUC for Ridge Model:", roc_ridge_auc, "\n")
+cat("AUC for Lasso Model:", roc_lasso_auc, "\n")
+
+```
+
+
+step 8
+```{r}
+# Load necessary library
+install.packages("doParallel")  # Run this only once
+library(caret)
+library(doParallel)
+# Set up a smaller grid for Ridge Regression
+ridge_grid <- expand.grid(alpha = 0,  # Ridge: alpha = 0
+                          lambda = seq(0.001, 0.01, length = 3))
+
+# Set up a smaller grid for Lasso Regression
+lasso_grid <- expand.grid(alpha = 1,  # Lasso: alpha = 1
+                          lambda = seq(0.001, 0.01, length = 3))
+
+# Set up cross-validation (5-fold)
+train_control <- trainControl(method = "cv", number = 5)
+
+# Register parallel backend
+numCores <- detectCores() - 1  # Use one less core
+cl <- makeCluster(numCores)
+registerDoParallel(cl)
+
+# Ridge Regression Grid Search
+ridge_grid_search <- train(oh_label ~ ., 
+                           data = trainData, 
+                           method = "glmnet", 
+                           trControl = train_control, 
+                           tuneGrid = ridge_grid)
+
+# Lasso Regression Grid Search
+lasso_grid_search <- train(oh_label ~ ., 
+                           data = trainData, 
+                           method = "glmnet", 
+                           trControl = train_control, 
+                           tuneGrid = lasso_grid)
+
+# Stop parallel backend properly
+stopCluster(cl)
+registerDoSEQ()  # Reset backend to sequential mode
+
+# Print best parameters and model performance
+print(ridge_grid_search)
+print(lasso_grid_search)
+```
+Dataset 2
+step1
+The objective of this project is to detect cyberbullying in social media comments by classifying each comment into categories: Normal, Offensive, and Hate Speech. Additionally, comments will be categorized based on specific Demographic Groups, such as Race, Religion, Gender, Sexual Orientation, and Miscellaneous. The goal is to identify bullying comments and categorize the specific demographic groups being targeted. This involves building a multi-class classification model to predict the bullying status and, if applicable, the targeted demographic group
+step2
+```{r}
+hateXplain=read.csv("C:\\Users\\aabua\\Desktop\\apd\\work2\\final_hateXplain.csv")
+head(hateXplain)
+```
+
+
+
+step 3
+```{r}
+library(dplyr)
+library(stopwords)
+
+library(stringr)
+
+# Load the hateXplain dataset (make sure the path is correct)
+hateXplain <- read.csv("C:\\Users\\aabua\\Desktop\\apd\\work2\\final_hateXplain.csv")
+
+# Step 1: View the first few rows of the dataset to check structure
+head(hateXplain)
+
+# Step 2: Ensure the 'comment' column is in character format (if not already)
+hateXplain$comment <- as.character(hateXplain$comment)
+
+# Step 3: Remove duplicates based on the 'comment' column
+hateXplain <- hateXplain %>%
+  distinct(comment, .keep_all = TRUE)  # Remove duplicate rows based on 'comment' column
+
+# Step 4: Handle missing values
+missing_values_count <- sum(is.na(hateXplain$comment))
+cat("Number of missing values in 'comment' column:", missing_values_count, "\n")
+hateXplain <- hateXplain %>%
+  drop_na(comment)  # Remove rows with missing 'comment' column
+
+# Step 5: Clean text data - Remove unnecessary characters (HTML tags, URLs, punctuation, special symbols)
+hateXplain <- hateXplain %>%
+  mutate(comment = str_remove_all(comment, "<.*?>")) %>%            # Remove HTML tags (this should work)
+  mutate(comment = str_remove_all(comment, "http[s]?://\\S+|www\\S+")) %>%  # Improved URL matching (handles https)
+  mutate(comment = str_remove_all(comment, "[[:punct:]]")) %>%       # Remove punctuation
+  mutate(comment = str_remove_all(comment, "`")) %>%                 # Remove backticks (`)
+  mutate(comment = str_replace_all(comment, "[^[:alnum:]\\s]", ""))  # Remove special symbols
+
+# Step 6: Remove numbers (if needed)
+hateXplain <- hateXplain %>%
+  mutate(comment = str_replace_all(comment, "\\d+", ""))  # Remove numbers
+# Step 6: Remove specific words like "th" and "o"
+hateXplain <- hateXplain %>%
+  mutate(comment = str_replace_all(comment, "\\b(th|o)\\b", ""))  # Remove standalone words "th" and "o"
+
+# Step 7: Lowercase conversion - Convert all text to lowercase
+hateXplain <- hateXplain %>%
+  mutate(comment = str_to_lower(comment))  # Convert to lowercase
+# Step 8: Remove stopwords
+# Using the 'tm' package to get a list of common stopwords in English
+stop_words <- stopwords("en")
+hateXplain <- hateXplain %>%
+  mutate(comment = str_remove_all(comment, paste("\\b", stop_words, "\\b", collapse = "|")))  # Remove stopwords
+hateXplain <- hateXplain %>%
+  mutate(comment = str_remove_all(comment, "[\U0001F600-\U0001F64F]"))  # Emojis in the Unicode range 1F600-1F64F (Emoticons)
+# Step 10: Remove one-letter words
+hateXplain <- hateXplain %>%
+  mutate(comment = str_remove_all(comment, "\\b[a-zA-Z]\\b"))  # Remove one-letter words
+
+
+
+# Final check on the cleaned data
+head(hateXplain)
+
+# Step 8: Save the cleaned dataset to a CSV file
+write.csv(hateXplain, "C:\\Users\\aabua\\Desktop\\apd\\work2\\cleaned_hateXplain.csv", row.names = FALSE)
+
+cat("Cleaning complete. The cleaned dataset has been saved as 'cleaned_hateXplain.csv'.\n")
+
+```
+```{r}
+summary(cleaned_hateXplain)
+# Inspect the structure
+
+table(cleaned_hateXplain$label)
+
+
+```
+
+```{r}
+# Load necessary libraries
+library(ggplot2)
+library(readr)
+cleaned_hateXplain <- read.csv("C:/Users/aabua/Desktop/apd/work2/cleaned_hateXplain.csv")
+
+
+# Check unique values of the 'label' column to verify the exact levels
+unique(cleaned_hateXplain$label)
+
+# Calculate the frequency of each label (Hatespeech, Offensive, Normal)
+label_counts <- table(cleaned_hateXplain$label)
+
+# Convert to a data frame for ggplot2
+label_df <- as.data.frame(label_counts)
+
+# Calculate percentages for each category
+label_df$percent <- (label_df$Freq / sum(label_df$Freq)) * 100
+
+# Create pie chart with percentages
+pie_chart <- ggplot(data = label_df, aes(x = "", y = Freq, fill = Var1)) +
+  geom_bar(stat = "identity", width = 1) +
+  coord_polar(theta = "y") +
+  theme_void() +
+  labs(title = "Distribution of  Labels") +
+  scale_fill_manual(values = c("hatespeech" = "red", "offensive" = "orange", "normal" = "green")) +
+  geom_text(aes(label = paste0(round(percent, 1), "%")), position = position_stack(vjust = 0.5), size = 5)
+
+# Print the pie chart
+print(pie_chart)
+
+```
+
+```{r}
+# Check unique values in 'label' column
+unique(cleaned_hateXplain$label)
+
+# Histogram for Hate Speech vs Race
+ggplot(cleaned_hateXplain, aes(x = Race, fill = label)) +
+  geom_bar(position = "dodge") +
+  labs(title = "Label vs Race", x = "Race", y = "Count") +
+  scale_fill_manual(values = c("hatespeech" = "red", "offensive" = "orange", "normal" = "green"))
+
+```
+
+```{r}
+# Check unique values in 'label' column
+unique(cleaned_hateXplain$label)
+
+# Histogram for Hate Speech vs Race
+ggplot(cleaned_hateXplain, aes(x = Religion, fill = label)) +
+  geom_bar(position = "dodge") +
+  labs(title = "Label vs Religion", x = "Religion", y = "Count") +
+  scale_fill_manual(values = c("hatespeech" = "red", "offensive" = "orange", "normal" = "green"))
+
+```
+
+```{r}
+# Check unique values in 'label' column
+unique(cleaned_hateXplain$label)
+
+# Histogram for Hate Speech vs Race
+ggplot(cleaned_hateXplain, aes(x = Gender, fill = label)) +
+  geom_bar(position = "dodge") +
+  labs(title = "Label vs Gender", x = "Gender", y = "Count") +
+  scale_fill_manual(values = c("hatespeech" = "red", "offensive" = "orange", "normal" = "green"))
+
+```
+
+```{r}
+# Check unique values in 'label' column
+unique(cleaned_hateXplain$label)
+
+# Histogram for Hate Speech vs Race
+ggplot(cleaned_hateXplain, aes(x = Sexual.Orientation, fill = label)) +
+  geom_bar(position = "dodge") +
+  labs(title = "Label vs Sexual Orientation", x = "Sexual Orientation", y = "Count") +
+  scale_fill_manual(values = c("hatespeech" = "red", "offensive" = "orange", "normal" = "green"))
+
+```
+
+```{r}
+# Check unique values in 'label' column
+unique(cleaned_hateXplain$label)
+
+# Histogram for Hate Speech vs Race
+ggplot(cleaned_hateXplain, aes(x = Miscellaneous, fill = label)) +
+  geom_bar(position = "dodge") +
+  labs(title = "Label vs Miscellaneous", x = "Miscellaneous", y = "Count") +
+  scale_fill_manual(values = c("hatespeech" = "red", "offensive" = "orange", "normal" = "green"))
+
+```
+
+```{r}
+install.packages("tidyverse")
+
+```
+```{r}
+# Load necessary libraries
+library(ggplot2)
+library(tidytext)
+library(tidyverse)
+
+library(wordcloud)
+
+# Load the dataset
+cleaned_hateXplain <- read.csv("C:/Users/aabua/Desktop/apd/work2/cleaned_hateXplain.csv")
+
+# Ensure case consistency in the Text column (if it's in the 'comment' column, change as needed)
+cleaned_hateXplain$comment <- tolower(cleaned_hateXplain$comment)  # Make text lowercase
+
+# Tokenize the text data to get word counts by label
+word_freq <- cleaned_hateXplain %>%
+  unnest_tokens(word, comment) %>%  # 'comment' is the text column, adjust if your column name is different
+  count(word, label, sort = TRUE)    # Count words by 'label' (e.g., Hatespeech, Normal, Offensive)
+
+# Generate Word Cloud with Colors
+wordcloud(words = word_freq$word, 
+          freq = word_freq$n, 
+          min.freq = 10, 
+          max.words = 100, 
+          random.order = FALSE, 
+          colors = c("blue", "red", "green")[as.factor(word_freq$label)])
+
+```
+step 5
+
+```{r}
+# Install necessary packages only if they are not already installed
+required_packages <- c("tm", "text2vec", "dplyr", "caret", "class", "ggplot2", "randomForest", "caTools")
+
+installed_packages <- installed.packages()
+missing_packages <- setdiff(required_packages, rownames(installed_packages))
+
+if(length(missing_packages) > 0) {
+  install.packages(missing_packages)
+}
+
+# Load the libraries
+library(tm)
+library(text2vec)
+library(dplyr)
+library(caret)
+library(class)
+library(ggplot2)
+library(randomForest)
+library(caTools)
+
+# Step 1: Load and Sample Data (5% of the dataset)
+# Load the cleaned dataset (assuming it is named cleaned_hateXplain)
+cleaned_hateXplain <- read.csv("C:/Users/aabua/Desktop/apd/work2/cleaned_hateXplain.csv")  # Replace with actual path if necessary
+
+# Sample 1% of the dataset to reduce memory usage (Adjust this to 5% if required)
+sample_size <- floor(0.01 * nrow(cleaned_hateXplain))  # Calculate 5% of rows
+sample_indices <- sample(seq_len(nrow(cleaned_hateXplain)), size = sample_size)  # Random sampling
+
+sampled_data <- cleaned_hateXplain[sample_indices, ]  # Subset the data to sampled portion
+
+# Step 2: Preprocess the 'comment' column (text data)
+comments <- sampled_data$comment  # Assuming the 'comment' column exists
+
+# Convert text to lower case
+comments <- tolower(comments)
+
+# Remove special characters and digits
+comments <- gsub("[^a-zA-Z\\s]", "", comments)
+
+# Remove stopwords (common words that do not add much value)
+comments <- removeWords(comments, stopwords("en"))
+
+# Optional: Perform stemming (reduces words to their root form)
+comments <- stemDocument(comments)
+
+# Step 3: Convert the cleaned text into a Document-Term Matrix (DTM) using TF-IDF
+dtm <- DocumentTermMatrix(Corpus(VectorSource(comments)))
+
+# Convert DTM into a matrix
+dtm_matrix <- as.matrix(dtm)
+
+# View the resulting TF-IDF matrix (first few rows)
+head(dtm_matrix)
+
+# Step 4: Combine TF-IDF features with other non-text features (like Race, Religion, etc.)
+# Assuming your other features are in columns such as 'Race', 'Religion', 'Gender', etc.
+# Extract these non-text features from the cleaned dataset
+non_text_features <- sampled_data %>%
+  select(Race, Religion, Gender, Sexual.Orientation, Miscellaneous)  # Adjust column names accordingly
+
+# Combine the TF-IDF matrix with these non-text features
+X_text <- as.data.frame(dtm_matrix)  # Convert TF-IDF matrix to data frame
+X_all <- cbind(X_text, non_text_features)  # Combine TF-IDF with other features
+
+# View the combined dataset
+head(X_all)
+
+# Step 5: Perform Feature Selection using Chi-Square Test
+# Perform chi-square test to select relevant features based on p-value
+y <- sampled_data$label  # Assuming 'label' is the target column
+
+# Chi-square test for each feature
+chi_sq_results_all <- apply(X_all, 2, function(x) {
+  chisq.test(table(x, y))$p.value
+})
+
+# View the Chi-Square p-values for each feature
+print(chi_sq_results_all)
+
+# Select features with p-value < 0.05 (statistically significant features)
+selected_features_all <- names(chi_sq_results_all[chi_sq_results_all < 0.05])
+
+# Filter the dataset to include only the selected features
+X_selected_all <- X_all[, selected_features_all]
+
+# View the selected features
+print(selected_features_all)
+
+```
+step 6
+```{r}
+# Split the data into training and testing sets
+set.seed(123)
+split <- sample.split(y, SplitRatio = 0.7)
+
+# Create training and testing sets
+train_data <- subset(X_selected_all, split == TRUE)
+test_data <- subset(X_selected_all, split == FALSE)
+
+# Create the labels for training and testing sets
+train_labels <- y[split == TRUE]
+test_labels <- y[split == FALSE]
+
+# Check the first few elements of train_labels and test_labels
+head(train_labels)
+head(test_labels)
+# Check if there are any NULL or NA values in train_labels and test_labels
+sum(is.null(train_labels))  # Should return 0
+sum(is.null(test_labels))   # Should return 0
+sum(is.na(train_labels))    # Should return 0
+sum(is.na(test_labels))     # Should return 0
+# Ensure both train_labels and test_labels have the same factor levels
+train_labels <- factor(train_labels, levels = c("normal", "hatespeech", "offensive"))
+test_labels <- factor(test_labels, levels = c("normal", "hatespeech", "offensive"))
+
+```
+
+```{r}
+#install.packages("nnet")  # Install the nnet package if you don't have it already
+library(nnet)  # Load the nnet package
+
+# Train the multinomial logistic regression model
+multinom_model <- multinom(train_labels ~ ., data = train_data)
+
+# Print the model summary to understand the coefficients
+summary(multinom_model)
+# Make predictions on the test set (returns class labels)
+predicted_class_multinom <- predict(multinom_model, test_data)
+
+# View the first few predictions
+head(predicted_class_multinom)
+
+```
+
+
+
+```{r}
+# Ensure target labels are factors with all levels
+all_levels <- levels(train_labels)  # Get all levels from the training set
+test_labels <- factor(test_labels, levels = all_levels)  # Ensure test set has all levels
+
+# Encode the factor labels as numeric values
+train_labels_numeric <- as.numeric(train_labels)
+test_labels_numeric <- as.numeric(test_labels)
+
+# Linear Model: Fit the model with numeric labels
+linear_model <- lm(train_labels_numeric ~ ., data = train_data)
+
+# Make predictions on the test set
+predictions_linear <- predict(linear_model, test_data)
+
+# Round predictions to the nearest integer (since labels are categorical)
+predictions_linear <- round(predictions_linear)
+
+# Convert numeric predictions back to factor
+predictions_linear <- factor(predictions_linear, levels = c(1, 2, 3))  # Assuming 1, 2, 3 represent the classes
+
+# Evaluate performance
+confusion_matrix_linear <- table(predictions_linear, test_labels)
+print(confusion_matrix_linear)
+
+```
+
+step 7
+
+```{r}
+# Confusion Matrix for multinomial logistic regression model
+conf_matrix_log <- table(predicted_class_multinom, test_labels)
+print(conf_matrix_log)
+
+# Accuracy: Overall percentage of correct predictions
+accuracy_log <- sum(diag(conf_matrix_log)) / sum(conf_matrix_log)
+cat("Accuracy: ", accuracy_log, "\n")
+
+# Precision, Recall, F1 for each label (Hate Speech, Offensive, Normal)
+precision_log <- diag(conf_matrix_log) / rowSums(conf_matrix_log)
+recall_log <- diag(conf_matrix_log) / colSums(conf_matrix_log)
+f1_log <- 2 * (precision_log * recall_log) / (precision_log + recall_log)
+
+cat("Precision (Hate Speech): ", precision_log["hatespeech"], "\n")
+cat("Recall (Hate Speech): ", recall_log["hatespeech"], "\n")
+cat("F1-Score (Hate Speech): ", f1_log["hatespeech"], "\n")
+
+cat("Precision (Offensive): ", precision_log["offensive"], "\n")
+cat("Recall (Offensive): ", recall_log["offensive"], "\n")
+cat("F1-Score (Offensive): ", f1_log["offensive"], "\n")
+
+cat("Precision (Normal): ", precision_log["normal"], "\n")
+cat("Recall (Normal): ", recall_log["normal"], "\n")
+cat("F1-Score (Normal): ", f1_log["normal"], "\n")
+
+# Specificity (True Negative Rate) for each class (generalized)
+specificity_log <- (rowSums(conf_matrix_log) - diag(conf_matrix_log)) / (sum(conf_matrix_log) - rowSums(conf_matrix_log))
+cat("Specificity (Hate Speech): ", specificity_log["hatespeech"], "\n")
+cat("Specificity (Offensive): ", specificity_log["offensive"], "\n")
+cat("Specificity (Normal): ", specificity_log["normal"], "\n")
+
+
+
+```
+
+```{r}
+# Ensure train_labels and test_labels are factors
+train_labels <- factor(train_labels, levels = c("hatespeech", "offensive", "normal"))
+test_labels <- factor(test_labels, levels = c("hatespeech", "offensive", "normal"))
+
+# Encode the factor labels as numeric values
+train_labels_numeric <- as.numeric(train_labels)
+test_labels_numeric <- as.numeric(test_labels)
+
+# Linear Model: Fit the model with numeric labels
+linear_model <- lm(train_labels_numeric ~ ., data = train_data)
+
+# Make predictions on the test set
+predictions_linear <- predict(linear_model, test_data)
+
+# Round predictions to the nearest integer (since labels are categorical)
+predictions_linear <- round(predictions_linear)
+
+# Convert numeric predictions back to factor (assuming 1 = "hatespeech", 2 = "offensive", 3 = "normal")
+predictions_linear <- factor(predictions_linear, levels = c(1, 2, 3))  
+
+# Confusion Matrix for Linear Regression model
+conf_matrix_linear <- table(predictions_linear, test_labels)
+print(conf_matrix_linear)
+
+# Accuracy: Overall percentage of correct predictions
+accuracy_linear <- sum(diag(conf_matrix_linear)) / sum(conf_matrix_linear)
+cat("Accuracy: ", accuracy_linear, "\n")
+
+# Precision, Recall, F1 for each class (Hate Speech, Offensive, Normal)
+precision_linear <- diag(conf_matrix_linear) / rowSums(conf_matrix_linear)
+recall_linear <- diag(conf_matrix_linear) / colSums(conf_matrix_linear)
+f1_linear <- 2 * (precision_linear * recall_linear) / (precision_linear + recall_linear)
+
+cat("Precision (Hate Speech): ", precision_linear["1"], "\n")
+cat("Recall (Hate Speech): ", recall_linear["1"], "\n")
+cat("F1-Score (Hate Speech): ", f1_linear["1"], "\n")
+
+cat("Precision (Offensive): ", precision_linear["2"], "\n")
+cat("Recall (Offensive): ", recall_linear["2"], "\n")
+cat("F1-Score (Offensive): ", f1_linear["2"], "\n")
+
+cat("Precision (Normal): ", precision_linear["3"], "\n")
+cat("Recall (Normal): ", recall_linear["3"], "\n")
+cat("F1-Score (Normal): ", f1_linear["3"], "\n")
+
+# Specificity (True Negative Rate) for each class (generalized)
+specificity_linear <- (rowSums(conf_matrix_linear) - diag(conf_matrix_linear)) / (sum(conf_matrix_linear) - rowSums(conf_matrix_linear))
+cat("Specificity (Hate Speech): ", specificity_linear["1"], "\n")
+cat("Specificity (Offensive): ", specificity_linear["2"], "\n")
+cat("Specificity (Normal): ", specificity_linear["3"], "\n")
+
+# ROC Curve and AUC (Area Under the Curve) for Linear Model
+library(pROC)
+
+# ROC Curve Calculation (ensure the prediction is numeric for multiclass ROC)
+roc_curve_linear <- multiclass.roc(test_labels, as.numeric(predictions_linear))
+auc_linear <- auc(roc_curve_linear)
+cat("AUC for Linear Regression: ", auc_linear, "\n")
+
+
+```
+
+
+step 8
+
+
