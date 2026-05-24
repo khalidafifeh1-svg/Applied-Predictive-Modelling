@@ -1,7 +1,7 @@
 # Applied-Predictive-Modelling
 # Cyberbullying Detection in Social Media using Machine Learning
 
-## 📌 Overview
+##  Overview
 This project focuses on detecting cyberbullying and offensive content in social media comments using machine learning and predictive modelling techniques. The system classifies text into:
 
 - Binary Classification: Cyberbullying vs Non-Cyberbullying  
@@ -11,7 +11,7 @@ The project also explores how different demographic groups are targeted in onlin
 
 ---
 
-## 🎯 Objectives
+##  Objectives
 - Build a model to detect cyberbullying in text data  
 - Handle large-scale and imbalanced datasets  
 - Compare multiple models (Ridge, Lasso, Logistic Regression)  
@@ -19,7 +19,7 @@ The project also explores how different demographic groups are targeted in onlin
 
 ---
 
-## 📊 Datasets
+##  Datasets
 ### Dataset 1 (Binary Classification)
 - Combined multiple datasets (Twitter, YouTube, Kaggle)
 - Total samples: ~225,000+
@@ -38,7 +38,7 @@ The project also explores how different demographic groups are targeted in onlin
 
 ---
 
-## 🛠️ Technologies Used
+## Technologies Used
 - R  
 - Machine Learning: `glmnet`, `caret`  
 - Text Processing: `tm`, `tidytext`, `SnowballC`  
@@ -47,7 +47,7 @@ The project also explores how different demographic groups are targeted in onlin
 
 ---
 
-## ⚙️ Methodology
+##  Methodology
 
 ### Data Preprocessing
 - Removed duplicates and missing values  
@@ -71,7 +71,7 @@ The project also explores how different demographic groups are targeted in onlin
 
 ---
 
-## 📈 Results
+##  Results
 
 ### Binary Classification (Dataset 1)
 
@@ -87,7 +87,7 @@ The project also explores how different demographic groups are targeted in onlin
 - F1-Score: 94.01%  
 - AUC: 0.749  
 
-📌 *Insight:*  
+ *Insight:*  
 Both models achieved very high recall, meaning they are effective at detecting cyberbullying. However, specificity was low due to class imbalance.
 
 ---
@@ -102,12 +102,12 @@ Both models achieved very high recall, meaning they are effective at detecting c
 - Accuracy: 65%  
 - Better performance across multiple classes  
 
-📌 *Insight:*  
+ *Insight:*  
 Multi-class classification is significantly more challenging due to class imbalance and complexity.
 
 ---
 
-## 📊 Key Insights
+## Key Insights
 - Cyberbullying comments tend to be shorter  
 - Strong class imbalance impacts model performance  
 - Feature selection and regularisation are critical  
@@ -115,19 +115,26 @@ Multi-class classification is significantly more challenging due to class imbala
 
 ---
 
-## 🚀 Future Improvements
+##  Future Improvements
 - Apply Deep Learning models (LSTM, BERT)  
 - Handle class imbalance using SMOTE or resampling  
 - Improve feature representation (word embeddings)  
 - Deploy as a real-time moderation system  
 
 ---
+<img width="1344" height="960" alt="download" src="https://github.com/user-attachments/assets/057e2083-f8bd-4a76-9083-4a3cf866635d" />
+<img width="1344" height="960" alt="download" src="https://github.com/user-attachments/assets/d4892aec-be19-444a-bf33-074683eb960a" />
+<img width="1344" height="960" alt="download" src="https://github.com/user-attachments/assets/91bba04d-fc9d-4819-8e20-763c47458751" />
+<img width="1344" height="960" alt="download" src="https://github.com/user-attachments/assets/7f6d3f8e-f42c-4042-a933-2b6106e8a53d" />
+<img width="1344" height="960" alt="download" src="https://github.com/user-attachments/assets/6603e942-8339-4da4-8713-e74d93b905f9" />
+<img width="1344" height="960" alt="download" src="https://github.com/user-attachments/assets/d773e413-3d90-44a7-a91b-90f12e0bc70b" />
+<img width="1344" height="960" alt="download" src="https://github.com/user-attachments/assets/b0f8cdef-989d-4f5c-b373-d9b6484354de" />
+<img width="1344" height="960" alt="download" src="https://github.com/user-attachments/assets/2fc28a08-5c33-434b-bca8-17d481ddf4db" />
+<img width="1344" height="960" alt="download" src="https://github.com/user-attachments/assets/d2a8b891-5ef3-4419-a9bc-5eecf12cfe9e" />
+<img width="1344" height="960" alt="download" src="https://github.com/user-attachments/assets/273e7e41-c0b5-4da4-9d08-65370ef4d2de" />
 
-## ▶️ How to Run
 
 ```r
-# Install required packages
-install.packages(c("tm", "caret", "glmnet", "tidytext", "ggplot2"))
 
 # Run the main script
 source("main.R")
