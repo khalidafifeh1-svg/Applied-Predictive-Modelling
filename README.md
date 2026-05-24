@@ -135,6 +135,3 @@ Multi-class classification is significantly more challenging due to class imbala
 
 
 ```r
-
-# Run the main script
-source("main.R")
